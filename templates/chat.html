@@ -49,6 +49,21 @@
             background: var(--primary);
             color: white;
         }
+
+        .topic-tag {
+            background: var(--primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .topic-tag:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -104,132 +119,133 @@
     </div>
 
     <script>
-let uploadedFiles = [];
+        let uploadedFiles = [];
 
-function updateFileName() {
-    const input = document.getElementById('pdfInput');
-    if(input.files[0]) {
-        document.getElementById('fileNameDisplay').innerText = input.files[0].name;
-    }
-}
-
-async function uploadPDF() {
-    const fileInput = document.getElementById('pdfInput');
-    const btn = document.getElementById('uploadBtn');
-    if (!fileInput.files[0]) return alert("Please select a file.");
-
-    const fileName = fileInput.files[0].name;
-    btn.innerText = "Indexing...";
-    btn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-
-    try {
-        const response = await fetch('/upload', { method: 'POST', body: formData });
-        const data = await response.json();
-        
-        if (data.error) throw new Error(data.error);
-
-        if(!uploadedFiles.includes(fileName)) {
-            uploadedFiles.push(fileName);
-            const fileList = document.getElementById('file-list');
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `📄 ${fileName}`;
-            fileList.prepend(item);
+        function updateFileName() {
+            const input = document.getElementById('pdfInput');
+            if(input.files[0]) {
+                document.getElementById('fileNameDisplay').innerText = input.files[0].name;
+            }
         }
 
-        const tagBox = document.getElementById('tag-box');
-        tagBox.innerHTML = '<p style="font-size: 0.75rem; opacity: 0.5; text-transform: uppercase;">Topics</p>';
-        
-        const pillContainer = document.createElement('div');
-        pillContainer.style.display = 'flex';
-        pillContainer.style.flexWrap = 'wrap';
-        pillContainer.style.gap = '8px';
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdfInput');
+            const btn = document.getElementById('uploadBtn');
+            if (!fileInput.files[0]) return alert("Please select a file.");
 
-        data.tags.forEach(tag => {
-            const span = document.createElement('span');
-            span.className = 'topic-tag';
-            span.innerText = tag;
-            span.style.cursor = "pointer";
-            span.onclick = () => { 
-                document.getElementById('userQuery').value = `Tell me about ${tag}`; 
-            };
-            pillContainer.appendChild(span);
-        });
-        tagBox.appendChild(pillContainer);
+            const fileName = fileInput.files[0].name;
+            btn.innerText = "Indexing...";
+            btn.disabled = true;
 
-        document.getElementById('fileNameDisplay').innerText = "➕ New PDF";
-        fileInput.value = "";
-        addMessage("bot", `Successfully indexed: ${fileName}`);
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
 
-    } catch (err) {
-        addMessage("bot", "Error: " + err.message);
-        console.error(err);
-    } finally {
-        btn.innerText = "Upload & Index";
-        btn.disabled = false;
-    }
-}
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
 
-async function askQuestion() {
-    const input = document.getElementById('userQuery');
-    const sendBtn = document.getElementById('sendBtn');
-    const query = input.value.trim();
-    if (!query) return;
+                if(!uploadedFiles.includes(fileName)) {
+                    uploadedFiles.push(fileName);
+                    const fileList = document.getElementById('file-list');
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.innerHTML = `📄 ${fileName}`;
+                    fileList.prepend(item);
+                }
 
-    addMessage("user", query);
-    input.value = "";
-    sendBtn.disabled = true;
+                const tagBox = document.getElementById('tag-box');
+                tagBox.innerHTML = '<p style="font-size: 0.75rem; opacity: 0.5; text-transform: uppercase;">Topics</p>';
+                
+                const pillContainer = document.createElement('div');
+                pillContainer.style.display = 'flex';
+                pillContainer.style.flexWrap = 'wrap';
+                pillContainer.style.gap = '8px';
 
-    try {
-        const response = await fetch('/chat', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'  // FIXED: Explicitly tell Flask we are sending JSON
-            },
-            body: JSON.stringify({ message: query })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            addMessage("bot", "⚠️ " + data.error);
-        } else {
-            addMessage("bot", data.response);
+                data.tags.forEach(tag => {
+                    const span = document.createElement('span');
+                    span.className = 'topic-tag';
+                    span.innerText = tag;
+                    span.onclick = () => { 
+                        document.getElementById('userQuery').value = `Tell me about ${tag}`; 
+                    };
+                    pillContainer.appendChild(span);
+                });
+                tagBox.appendChild(pillContainer);
+
+                document.getElementById('fileNameDisplay').innerText = "➕ New PDF";
+                fileInput.value = "";
+                addMessage("bot", `Successfully indexed: ${fileName}`);
+
+            } catch (err) {
+                addMessage("bot", "Error: " + err.message);
+                console.error(err);
+            } finally {
+                btn.innerText = "Upload & Index";
+                btn.disabled = false;
+            }
         }
-    } catch (err) {
-        addMessage("bot", "Server connection error. Please try again.");
-    } finally {
-        sendBtn.disabled = false;
-    }
-}
 
-function addMessage(sender, text) {
-    const win = document.getElementById('chat-window');
-    const div = document.createElement('div');
-    div.className = `msg ${sender}-msg`;
-    div.innerText = text;
-    win.appendChild(div);
-    win.scrollTop = win.scrollHeight;
-}
+        async function askQuestion() {
+            const input = document.getElementById('userQuery');
+            const sendBtn = document.getElementById('sendBtn');
+            const query = input.value.trim();
+            if (!query) return;
 
-function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+            addMessage("user", query);
+            input.value = "";
+            sendBtn.disabled = true;
+            sendBtn.innerText = "...";
 
-function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-    const isDark = document.body.classList.contains('dark-mode');
-    document.getElementById('theme-icon').innerText = isDark ? '☀️' : '🌙';
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-}
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json' // CRITICAL: This line fixes the 415 error
+                    },
+                    body: JSON.stringify({ message: query })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage("bot", "⚠️ Error: " + data.error);
+                } else {
+                    addMessage("bot", data.response);
+                }
+            } catch (err) {
+                addMessage("bot", "Server connection lost. Try refreshing.");
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Send";
+            }
+        }
 
-window.onload = () => {
-    if (localStorage.getItem('theme') === 'light') {
-        document.body.classList.remove('dark-mode');
-        document.getElementById('theme-icon').innerText = '🌙';
-    }
-};
+        function addMessage(sender, text) {
+            const win = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `msg ${sender}-msg`;
+            div.innerText = text;
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            document.getElementById('theme-icon').innerText = isDark ? '☀️' : '🌙';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        window.onload = () => {
+            if (localStorage.getItem('theme') === 'light') {
+                document.body.classList.remove('dark-mode');
+                document.getElementById('theme-icon').innerText = '🌙';
+            }
+        };
     </script>
 </body>
 </html>
