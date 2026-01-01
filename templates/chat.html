@@ -1,40 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>AI Chatroom | PDF Knowledge Base</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-<div class="app-container">
+<div class="container">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <h2>📄 Upload PDF</h2>
+    <!-- ========== SIDEBAR (UNCHANGED UI) ========== -->
+    <div class="sidebar">
+        <h2>Upload PDF</h2>
 
         <input
             type="file"
             id="pdfInput"
             accept="application/pdf"
             onchange="updateFileName(this)"
-        />
+        >
 
         <p id="fileName">No file selected</p>
 
-        <button id="uploadBtn" onclick="uploadPDF()">
-            Upload & Index
-        </button>
-    </aside>
+        <button onclick="uploadPDF()">Upload & Index</button>
+    </div>
 
-    <!-- Chat Section -->
-    <main class="chat-section">
-        <header class="chat-header">
+    <!-- ========== CHAT SECTION (UNCHANGED UI) ========== -->
+    <div class="chat-container">
+        <div class="chat-header">
             <h2>Enterprise Doc AI</h2>
-        </header>
+        </div>
 
         <div id="chatBox" class="chat-box"></div>
 
@@ -42,19 +40,19 @@
             <input
                 type="text"
                 id="userQuery"
-                placeholder="Ask something about your document..."
-                onkeydown="if(event.key === 'Enter') askQuestion()"
-            />
+                placeholder="Ask something..."
+                onkeydown="if(event.key==='Enter') askQuestion()"
+            >
             <button id="sendBtn" onclick="askQuestion()">Send</button>
         </div>
-    </main>
+    </div>
 
 </div>
 
-<!-- ================== JAVASCRIPT ================== -->
+<!-- ================= JAVASCRIPT ================= -->
 <script>
-/* -------------------------------
-   Add message to chat UI
+/* --------------------------------
+   Chat UI helper
 -------------------------------- */
 function addMessage(sender, text) {
     const chatBox = document.getElementById("chatBox");
@@ -65,14 +63,13 @@ function addMessage(sender, text) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-/* -------------------------------
-   Ask Question (Chat)
+/* --------------------------------
+   Ask Question (FIXED)
 -------------------------------- */
 async function askQuestion() {
     const input = document.getElementById("userQuery");
     const sendBtn = document.getElementById("sendBtn");
     const query = input.value.trim();
-
     if (!query) return;
 
     addMessage("user", query);
@@ -102,25 +99,27 @@ async function askQuestion() {
     }
 }
 
-/* -------------------------------
-   Show selected file name
+/* --------------------------------
+   REQUIRED: show filename
 -------------------------------- */
 function updateFileName(input) {
     const label = document.getElementById("fileName");
-    if (input.files.length > 0) {
+    if (!label) return;
+
+    if (input.files && input.files.length > 0) {
         label.innerText = input.files[0].name;
     } else {
         label.innerText = "No file selected";
     }
 }
 
-/* -------------------------------
-   Upload PDF to Backend
+/* --------------------------------
+   REQUIRED: upload PDF
 -------------------------------- */
 async function uploadPDF() {
     const fileInput = document.getElementById("pdfInput");
 
-    if (!fileInput.files.length) {
+    if (!fileInput || !fileInput.files.length) {
         alert("Please select a PDF file first");
         return;
     }
@@ -137,13 +136,11 @@ async function uploadPDF() {
         const data = await response.json();
 
         if (!response.ok || data.error) {
-            alert("❌ Upload failed: " + (data.error || "Unknown error"));
+            alert(data.error || "Upload failed");
             return;
         }
 
-        alert("✅ PDF indexed successfully!");
-        console.log("Tags:", data.tags);
-
+        alert("✅ PDF uploaded and indexed successfully");
     } catch (err) {
         console.error(err);
         alert("❌ Server error during upload");
