@@ -69,7 +69,7 @@ def upload_pdf():
         # We use Gemini 1.5 Flash for better free-tier stability
         print("DEBUG: Requesting tags from Gemini...", file=sys.stderr)
         tag_prompt = f"List 5 short main topics from this text as a comma-separated list:\n\n{md_content[:3000]}"
-        tag_resp = client.models.generate_content(model="gemini-1.5-flash", contents=tag_prompt)
+        tag_resp = client.models.generate_content(model="gemini-2.0-flash", contents=tag_prompt)
         tags = [t.strip() for t in tag_resp.text.split(",")]
 
         # Step 3: Local Vector Storage (Zero Quota usage)
@@ -102,7 +102,7 @@ def chat_logic():
         
         # 2. Ask Gemini 1.5 Flash
         prompt = f"Answer the question using only the context below:\n\nCONTEXT:\n{context_text}\n\nQUESTION: {user_query}"
-        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
         
         return jsonify({"response": response.text})
 
@@ -114,4 +114,5 @@ if __name__ == "__main__":
     # Railway dynamic port binding
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
 
