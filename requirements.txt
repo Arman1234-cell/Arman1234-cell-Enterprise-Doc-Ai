@@ -1,11 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 flask
-google-genai
+gunicorn
+werkzeug
 pymupdf4llm
+google-genai
 chromadb
+sentence-transformers
 langchain-text-splitters
 python-dotenv
-gunicorn
---extra-index-url https://download.pytorch.org/whl/cpu
-torch
-torchvision
-sentence-transformers
+torch==2.2.1+cpu
+torchvision==0.17.1+cpu
