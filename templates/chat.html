@@ -118,10 +118,10 @@
         </main>
     </div>
 
-    <script>
+   <script>
 async function askQuestion() {
-    const input = document.getElementById('userQuery');
-    const sendBtn = document.getElementById('sendBtn');
+    const input = document.getElementById("userQuery");
+    const sendBtn = document.getElementById("sendBtn");
     const query = input.value.trim();
     if (!query) return;
 
@@ -131,23 +131,21 @@ async function askQuestion() {
     sendBtn.innerText = "...";
 
     try {
-        const response = await fetch('/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: query })
         });
 
         const data = await response.json();
 
         if (data.error) {
-            addMessage("bot", "⚠️ Error: " + data.error);
+            addMessage("bot", "⚠️ " + data.error);
         } else {
             addMessage("bot", data.response);
         }
     } catch (err) {
-        addMessage("bot", "Server connection lost. Try refreshing.");
+        addMessage("bot", "Server error. Refresh and try again.");
     } finally {
         sendBtn.disabled = false;
         sendBtn.innerText = "Send";
