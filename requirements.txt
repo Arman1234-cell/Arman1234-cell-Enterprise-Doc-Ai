@@ -7,3 +7,4 @@ langchain-text-splitters
 python-dotenv
 pytesseract
 gunicorn
+sentence-transformers
