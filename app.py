@@ -1,6 +1,6 @@
 import os
 import uuid
-import sys # Added for log flushing
+import sys
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 import pymupdf4llm
@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
-# Use absolute paths to avoid directory confusion on Render
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -23,10 +22,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
-# Use Google Embeddings to save memory
 emb_fn = embedding_functions.GoogleGenerativeAiEmbeddingFunction(api_key=API_KEY)
 
-# Persistent DB path
 db_client = chromadb.PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
 collection = db_client.get_or_create_collection(name="pdf_knowledge", embedding_function=emb_fn)
 
@@ -39,6 +36,21 @@ def chat_page():
     return render_template("chat.html")
 
 @app.route("/upload", methods=["POST"])
+def upload_pdf():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part in request"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        # Extraction logic
+        md_content = pymupdf4llm.to_markdown(filepath, force_ocr=False)
 
         if not md_content.strip():
             return jsonify({"error": "Extracted text is empty. PDF might be encrypted or image-only."}), 400
@@ -50,13 +62,8 @@ def chat_page():
         tags = [t.strip() for t in tag_resp.text.split(",")]
 
         # Step 3: Vector Storage
-        # Change chunk_size to be larger to reduce the number of requests
         splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
         chunks = splitter.split_text(md_content)
-
-# ChromaDB will still try to embed these. 
-# If it fails, you may need a fresh API key or to enable billing 
-# (Google often gives a $300 credit for free).
         
         collection.add(
             documents=chunks,
@@ -68,7 +75,6 @@ def chat_page():
         return jsonify({"message": "Ready!", "tags": tags})
 
     except Exception as e:
-        # This sends the EXACT error back to your website UI
         error_msg = f"CRITICAL UPLOAD ERROR: {str(e)}"
         print(error_msg, file=sys.stderr)
         return jsonify({"error": error_msg}), 500
@@ -89,8 +95,6 @@ def chat_logic():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
+    # Use Railway's dynamic PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
