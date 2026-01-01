@@ -36,7 +36,7 @@ def ingest_and_summarize(pdf_path):
     
     # Step 1: Extraction with Forced OCR
     start_time = time.time()
-    md_content = pymupdf4llm.to_markdown(pdf_path, force_ocr=True)
+    md_content = pymupdf4llm.to_markdown(pdf_path, force_ocr=False)
     
     if not md_content or not md_content.strip():
         print("❌ OCR failed to find text. Check your Tesseract installation.")
@@ -98,3 +98,4 @@ if __name__ == "__main__":
             chat_interface(knowledge_base)
     else:
         print("❌ File not found!")
+
