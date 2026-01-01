@@ -16,13 +16,13 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
-# Using Google Embeddings to stay under Railway's RAM limit
-emb_fn = embedding_functions.GoogleGenerativeAiEmbeddingFunction(api_key=API_KEY)
+# --- THE FIX: LOCAL EMBEDDINGS ---
+# This runs on Railway's CPU. It does NOT use your Google API Quota.
+emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
 
 db_client = chromadb.PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
 collection = db_client.get_or_create_collection(name="pdf_knowledge", embedding_function=emb_fn)
@@ -39,29 +39,23 @@ def chat_page():
 def upload_pdf():
     try:
         if 'file' not in request.files:
-            return jsonify({"error": "No file part"}), 400
+            return jsonify({"error": "No file"}), 400
         
         file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
-
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
 
-        # Step 1: Extract (OCR False for cloud compatibility)
+        # 1. Text Extraction
         md_content = pymupdf4llm.to_markdown(filepath, force_ocr=False)
 
-        if not md_content.strip():
-            return jsonify({"error": "No text found in PDF."}), 400
-
-        # Step 2: Gemini Tagging (Limit text to 3000 chars to save quota)
-        tag_prompt = f"List 5 main topics from this text as a comma-separated list:\n\n{md_content[:3000]}"
+        # 2. Topic Tagging (Uses 1 request to Gemini)
+        tag_prompt = f"List 3-5 main topics from this text as a comma-separated list:\n\n{md_content[:2000]}"
         tag_resp = client.models.generate_content(model="gemini-1.5-flash", contents=tag_prompt)
         tags = [t.strip() for t in tag_resp.text.split(",")]
 
-        # Step 3: Vector Storage
-        splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+        # 3. Vector Storage (Local - No API Quota used here!)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=300)
         chunks = splitter.split_text(md_content)
         
         collection.add(
@@ -70,19 +64,19 @@ def upload_pdf():
             metadatas=[{"source": filename} for _ in chunks]
         )
         
-        return jsonify({"message": "Ready!", "tags": tags})
+        return jsonify({"message": "Success!", "tags": tags})
 
     except Exception as e:
-        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/chat", methods=["POST"])
 def chat_logic():
     try:
         user_query = request.json.get("message")
-        results = collection.query(query_texts=[user_query], n_results=5)
+        results = collection.query(query_texts=[user_query], n_results=3)
         context_text = "\n\n".join(results['documents'][0])
         
-        prompt = f"Answer based ONLY on context:\n{context_text}\n\nQuestion: {user_query}"
+        prompt = f"Answer based on context:\n{context_text}\n\nQuestion: {user_query}"
         response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
         
         return jsonify({"response": response.text})
