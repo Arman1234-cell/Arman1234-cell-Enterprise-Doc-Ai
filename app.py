@@ -72,8 +72,13 @@ def upload_pdf():
         tags = [t.strip() for t in tag_resp.text.split(",")]
 
         # Step 3: Vector Storage
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+        # Change chunk_size to be larger to reduce the number of requests
+        splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
         chunks = splitter.split_text(md_content)
+
+# ChromaDB will still try to embed these. 
+# If it fails, you may need a fresh API key or to enable billing 
+# (Google often gives a $300 credit for free).
         
         collection.add(
             documents=chunks,
@@ -108,3 +113,4 @@ def chat_logic():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
