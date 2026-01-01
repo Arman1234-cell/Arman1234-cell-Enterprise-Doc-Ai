@@ -1,128 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Knowledge Assistant | Chat</title>
+    <meta charset="UTF-8" />
+    <title>AI Chatroom | PDF Knowledge Base</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        /* Sidebar Scrollable Sections */
-        .sidebar-content {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            padding: 20px;
-            gap: 15px;
-        }
-
-        .pdf-history {
-            flex-grow: 1;
-            overflow-y: auto;
-            margin-top: 10px;
-        }
-
-        .history-item {
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .back-home {
-            text-decoration: none;
-            color: var(--text-main);
-            font-size: 0.9rem;
-            padding: 8px 15px;
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            margin-left: auto;
-            transition: 0.3s;
-        }
-
-        .back-home:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .topic-tag {
-            background: var(--primary);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .topic-tag:hover {
-            opacity: 0.8;
-            transform: translateY(-2px);
-        }
-    </style>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="dark-mode">
 
-    <nav class="top-nav">
-        <div class="hamburger" onclick="toggleSidebar()">
-            <span></span><span></span><span></span>
+<body>
+<div class="app-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h2>📄 Upload PDF</h2>
+
+        <input
+            type="file"
+            id="pdfInput"
+            accept="application/pdf"
+            onchange="updateFileName(this)"
+        />
+
+        <p id="fileName">No file selected</p>
+
+        <button id="uploadBtn" onclick="uploadPDF()">
+            Upload & Index
+        </button>
+    </aside>
+
+    <!-- Chat Section -->
+    <main class="chat-section">
+        <header class="chat-header">
+            <h2>Enterprise Doc AI</h2>
+        </header>
+
+        <div id="chatBox" class="chat-box"></div>
+
+        <div class="chat-input">
+            <input
+                type="text"
+                id="userQuery"
+                placeholder="Ask something about your document..."
+                onkeydown="if(event.key === 'Enter') askQuestion()"
+            />
+            <button id="sendBtn" onclick="askQuestion()">Send</button>
         </div>
-        <div style="font-weight: 600;">Knowledge Assistant</div>
-        
-        <a href="{{ url_for('index') }}" class="back-home">🏠 Home</a>
-        
-        <div class="theme-toggle" onclick="toggleTheme()" style="margin-left: 15px; cursor: pointer;">
-            <span id="theme-icon">☀️</span>
-        </div>
-    </nav>
+    </main>
 
-    <div class="app-wrapper">
-        <aside id="sidebar" class="sidebar">
-            <div class="sidebar-content">
-                <h4>Documents</h4>
-                
-                <div class="upload-section">
-                    <input type="file" id="pdfInput" accept=".pdf" style="display: none;" onchange="updateFileName()">
-                    <label for="pdfInput" style="display: block; padding: 12px; border: 2px dashed var(--border); border-radius: 10px; text-align: center; cursor: pointer; margin-bottom: 10px;">
-                        <span id="fileNameDisplay">➕ New PDF</span>
-                    </label>
-                    <button onclick="uploadPDF()" id="uploadBtn" style="width: 100%;">Upload & Index</button>
-                </div>
+</div>
 
-                <hr style="border: 0; border-top: 1px solid var(--border); margin: 10px 0;">
+<!-- ================== JAVASCRIPT ================== -->
+<script>
+/* -------------------------------
+   Add message to chat UI
+-------------------------------- */
+function addMessage(sender, text) {
+    const chatBox = document.getElementById("chatBox");
+    const msg = document.createElement("div");
+    msg.className = sender === "user" ? "user-msg" : "bot-msg";
+    msg.innerText = text;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-                <div class="pdf-history">
-                    <p style="font-size: 0.75rem; opacity: 0.5; text-transform: uppercase;">Recent Files</p>
-                    <div id="file-list"></div>
-                </div>
-
-                <div id="tag-box">
-                    <p style="font-size: 0.75rem; opacity: 0.5; text-transform: uppercase;">Topics</p>
-                </div>
-            </div>
-        </aside>
-
-        <main class="chat-main">
-            <div id="chat-window">
-                <div class="msg bot-msg">Hello! Upload your PDFs in the sidebar to begin.</div>
-            </div>
-            <footer>
-                <input type="text" id="userQuery" placeholder="Ask a question..." onkeypress="if(event.key === 'Enter') askQuestion()">
-                <button onclick="askQuestion()" id="sendBtn">Send</button>
-            </footer>
-        </main>
-    </div>
-
-   <script>
+/* -------------------------------
+   Ask Question (Chat)
+-------------------------------- */
 async function askQuestion() {
     const input = document.getElementById("userQuery");
     const sendBtn = document.getElementById("sendBtn");
     const query = input.value.trim();
+
     if (!query) return;
 
     addMessage("user", query);
@@ -145,10 +95,58 @@ async function askQuestion() {
             addMessage("bot", data.response);
         }
     } catch (err) {
-        addMessage("bot", "Server error. Refresh and try again.");
+        addMessage("bot", "❌ Server error. Please refresh.");
     } finally {
         sendBtn.disabled = false;
         sendBtn.innerText = "Send";
+    }
+}
+
+/* -------------------------------
+   Show selected file name
+-------------------------------- */
+function updateFileName(input) {
+    const label = document.getElementById("fileName");
+    if (input.files.length > 0) {
+        label.innerText = input.files[0].name;
+    } else {
+        label.innerText = "No file selected";
+    }
+}
+
+/* -------------------------------
+   Upload PDF to Backend
+-------------------------------- */
+async function uploadPDF() {
+    const fileInput = document.getElementById("pdfInput");
+
+    if (!fileInput.files.length) {
+        alert("Please select a PDF file first");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+        const response = await fetch("/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            alert("❌ Upload failed: " + (data.error || "Unknown error"));
+            return;
+        }
+
+        alert("✅ PDF indexed successfully!");
+        console.log("Tags:", data.tags);
+
+    } catch (err) {
+        console.error(err);
+        alert("❌ Server error during upload");
     }
 }
 </script>
