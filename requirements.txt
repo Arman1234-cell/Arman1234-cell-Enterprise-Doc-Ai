@@ -1,4 +1,5 @@
 flask
+google-genai
 google-generativeai
 pymupdf4llm
 chromadb
