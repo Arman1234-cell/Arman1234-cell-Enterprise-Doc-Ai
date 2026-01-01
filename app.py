@@ -28,7 +28,8 @@ client = genai.Client(api_key=API_KEY)
 # This runs on Railway's CPU. It does NOT count against your Google 429 limit.
 # Note: On the first run, Railway will take a minute to download this model (~80MB).
 try:
-    emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+    # Using a faster, smaller model to stay under Railway's 1GB RAM limit
+    emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
 except Exception as e:
     print(f"Error loading local embedding model: {e}", file=sys.stderr)
 
@@ -113,3 +114,4 @@ if __name__ == "__main__":
     # Railway dynamic port binding
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
