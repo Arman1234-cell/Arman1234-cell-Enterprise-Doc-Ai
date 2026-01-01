@@ -7,8 +7,9 @@ import pymupdf4llm
 from google import genai
 from dotenv import load_dotenv
 from chromadb import PersistentClient
-from chromadb.utils import embedding_functions
+from chromadb.utils import embedding_functions # Import embedding utilities
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import pytesseract
 
 # 1. SETUP & SECURITY
 load_dotenv()
@@ -16,14 +17,19 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 CHROMA_DIR = "master_knowledge_db"
 COLLECTION_NAME = "pdf_rag_index"
 
-# --- TESSERACT OCR CONFIG (For Scanned PDFs) ---
-import pytesseract
-pytesseract.pytesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-os.environ['TESSDATA_PREFIX'] = r'C:\Program Files\Tesseract-OCR\tessdata'
+# --- OCR CONFIG (FIXED FOR CLOUD/WINDOWS) ---
+if os.name == 'nt':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    os.environ['TESSDATA_PREFIX'] = r'C:\Program Files\Tesseract-OCR\tessdata'
 
 # Initialize Gemini Client
 client = genai.Client(api_key=GEMINI_API_KEY)
-emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+
+# --- MEMORY FIX: GOOGLE EMBEDDINGS ---
+# We remove 'all-MiniLM-L6-v2' to save ~400MB of RAM
+emb_fn = embedding_functions.GoogleGenerativeAiEmbeddingFunction(
+    api_key=GEMINI_API_KEY
+)
 
 def ingest_and_summarize(pdf_path):
     print(f"\n🚀 Ingesting: {pdf_path}")
@@ -33,7 +39,7 @@ def ingest_and_summarize(pdf_path):
     md_content = pymupdf4llm.to_markdown(pdf_path, force_ocr=True)
     
     if not md_content or not md_content.strip():
-        print("❌ OCR failed to find text. Check your Tesseract path.")
+        print("❌ OCR failed to find text. Check your Tesseract installation.")
         return None
 
     # Step 2: Immediate Topic Discovery
@@ -50,8 +56,12 @@ def ingest_and_summarize(pdf_path):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
     chunks = splitter.split_text(md_content)
     
+    # Persistent Client
     db_client = PersistentClient(path=CHROMA_DIR)
-    collection = db_client.get_or_create_collection(name=COLLECTION_NAME, embedding_function=emb_fn)
+    collection = db_client.get_or_create_collection(
+        name=COLLECTION_NAME, 
+        embedding_function=emb_fn
+    )
     
     collection.add(
         documents=chunks,
