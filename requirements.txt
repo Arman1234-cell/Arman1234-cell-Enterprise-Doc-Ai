@@ -1,6 +1,6 @@
 flask
-google-genai
 google-generativeai
+google-genai
 pymupdf4llm
 chromadb
 langchain-text-splitters
