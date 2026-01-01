@@ -39,36 +39,6 @@ def chat_page():
     return render_template("chat.html")
 
 @app.route("/upload", methods=["POST"])
-def upload_pdf():
-    try:
-        if 'file' not in request.files:
-            return jsonify({"error": "No file uploaded"}), 400
-        
-        file = request.files['file']
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        # 1. Use larger chunks to stay under the token limit
-        md_content = pymupdf4llm.to_markdown(filepath, force_ocr=False)
-        splitter = RecursiveCharacterTextSplitter(chunk_size=5000, chunk_overlap=400)
-        chunks = splitter.split_text(md_content)
-
-        # 2. BATCH ADD: This sends everything in ONE request
-        # This is the most important change for the Free Tier
-        collection.add(
-            documents=chunks,
-            ids=[f"{filename}-{uuid.uuid4()}" for _ in chunks],
-            metadatas=[{"source": filename} for _ in chunks]
-        )
-
-        # 3. Simple static tag to save one extra API call
-        tags = ["Analysis Complete"] 
-
-        return jsonify({"message": "Ready!", "tags": tags})
-    except Exception as e:
-        print(f"UPLOAD ERROR: {str(e)}", file=sys.stderr)
-        return jsonify({"error": str(e)}), 500
 
         if not md_content.strip():
             return jsonify({"error": "Extracted text is empty. PDF might be encrypted or image-only."}), 400
@@ -121,5 +91,6 @@ def chat_logic():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
