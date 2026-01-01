@@ -198,14 +198,13 @@
             sendBtn.disabled = true;
             sendBtn.innerText = "...";
 
-            try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json' // CRITICAL: This line fixes the 415 error
-                    },
-                    body: JSON.stringify({ message: query })
-                });
+            try const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' // This "labels" the data as JSON
+                },
+                body: JSON.stringify({ message: query }) // This converts your text into JSON format
+            });
                 
                 const data = await response.json();
                 
