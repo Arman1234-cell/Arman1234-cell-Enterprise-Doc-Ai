@@ -61,8 +61,7 @@ def upload_pdf():
     file.save(filepath)
 
     # Convert PDF to Markdown using OCR
-    md_content = pymupdf4llm.to_markdown(filepath, force_ocr=True)
-    
+    md_content = pymupdf4llm.to_markdown(filepath, force_ocr=False)    
     # Generate Topic Tags
     tag_prompt = f"List 5 main topics from this text as a comma-separated list:\n\n{md_content[:4000]}"
     tag_resp = client.models.generate_content(model="gemini-flash-lite-latest", contents=tag_prompt)
@@ -111,3 +110,4 @@ def chat_logic():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
